@@ -565,17 +565,30 @@ function init() {
     textOverlay.style.left = '50%';
     textOverlay.style.transform = 'translateX(-50%)';
     textOverlay.style.color = 'white';
-    textOverlay.style.fontFamily = 'Arial, sans-serif';
+    textOverlay.style.fontFamily = 'Cinzel, serif';
     textOverlay.style.fontSize = '24px';
     textOverlay.style.textAlign = 'center';
     textOverlay.style.textShadow = '2px 2px 4px rgba(0, 0, 0, 0.5)';
-    textOverlay.style.transition = 'opacity 1s ease-in-out';
     textOverlay.style.pointerEvents = 'none';
-    textOverlay.style.opacity = '1';
+    textOverlay.style.opacity = '0';
     textOverlay.style.maxWidth = '80%';
     textOverlay.style.padding = '20px';
     textOverlay.innerHTML = "Et si tout ça n'était qu'une illusion ?<br>Cliquez sur la toupie… et découvrez la vérité.";
     document.body.appendChild(textOverlay);
+
+    // Animation initiale avec GSAP
+    gsap.fromTo(textOverlay, 
+      {
+        opacity: 0,
+        y: 20
+      },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1.2,
+        ease: "power2.out"
+      }
+    );
   }
 
   function createMirrorScene() {
@@ -855,23 +868,34 @@ function init() {
     isSpinning = true;
     const isDream = Math.random() > 0.5;
     
-    // Faire disparaître le texte initial avec une animation
-    gsap.to(textOverlay, {
-      opacity: 0,
-      duration: 1,
-      onComplete: () => {
-        // Mettre à jour le texte selon le mode
-        textOverlay.innerHTML = isDream ? 
-          "Vous rêvez.<br>Laissez-vous emporter par les flots de l'inconscience…" :
-          "Vous êtes éveillé.<br>Mais pour combien de temps encore… ?";
-        
-        // Faire réapparaître le texte
-        gsap.to(textOverlay, {
-          opacity: 1,
-          duration: 1
-        });
-      }
-    });
+    // Fonction pour animer le changement de texte
+    function animateTextChange(newText) {
+      gsap.to(textOverlay, {
+        opacity: 0,
+        duration: 0.8,
+        onComplete: () => {
+          textOverlay.innerHTML = newText;
+          gsap.fromTo(textOverlay, 
+            {
+              opacity: 0,
+              y: 20
+            },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 1.2,
+              ease: "power2.out"
+            }
+          );
+        }
+      });
+    }
+    
+    // Premier changement de texte
+    animateTextChange(isDream ? 
+      "Vous rêvez.<br>Laissez-vous emporter par les flots de l'inconscience…" :
+      "Vous êtes éveillé.<br>Mais pour combien de temps encore… ?"
+    );
 
     const maxRotationSpeed = 25;
     const duration = isDream ? 20 : 5;
@@ -950,7 +974,7 @@ function init() {
         const oscillation = Math.cos(elapsed * 2) * tiltDecay;
         
         // Calcul de la hauteur de la toupie en fonction de l'oscillation
-        const height = Math.abs(Math.sin(oscillation)) * 0.3; // Hauteur maximale de 0.3 unités
+        const height = Math.abs(Math.sin(oscillation)) * 0.3;
         
         // Limiter l'oscillation pour éviter que la toupie ne passe sous le sol
         totem.rotation.x = Math.max(oscillation, -0.2);
@@ -969,19 +993,8 @@ function init() {
       } else {
         isSpinning = false;
         
-        // Faire disparaître le texte à la fin
-        gsap.to(textOverlay, {
-          opacity: 0,
-          duration: 1,
-          onComplete: () => {
-            // Remettre le texte initial
-            textOverlay.innerHTML = "Et si tout ça n'était qu'un rêve ?<br>Cliquez sur la toupie… et découvrez la vérité.";
-            gsap.to(textOverlay, {
-              opacity: 1,
-              duration: 1
-            });
-          }
-        });
+        // Animation finale du texte
+        animateTextChange("Et si tout ça n'était qu'une illusion ?<br>Cliquez sur la toupie… et découvrez la vérité.");
         
         // Remet la toupie droite à la fin
         gsap.to(totem.rotation, {
@@ -1291,24 +1304,9 @@ function animate() {
   }
 }
 
-// Optionnel : Ajouter des styles CSS pour améliorer l'apparence
+// Mettre à jour les styles CSS (suppression des animations)
 const style = document.createElement('style');
 style.textContent = `
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes float {
-    0% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-10px); }
-    100% { transform: translateX(-50%) translateY(0); }
-  }
 `;
 document.head.appendChild(style);
-
-// Appliquer l'animation de flottement au texte
-textOverlay.style.animation = 'float 4s ease-in-out infinite';
-textOverlay.style.fontFamily = 'Cinzel, serif';
