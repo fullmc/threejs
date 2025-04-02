@@ -258,14 +258,21 @@ function init() {
     ground.material = reflectiveGroundMat;
     
     // Lumières néon
-    const colors = [0x00ffff, 0xff00ff, 0x9900ff, 0xff0000, 0x00ff00, 0x0000ff];
+    const colors = [
+      0x00ffff, 0xff00ff, 0x9900ff, 0xff0000, 0x00ff00, 0x0000ff,
+      0xffff00, 0xff00aa, 0x00ffff, 0xff00ff, 0x9900ff, 0xff0000,
+      0x00ff00, 0x0000ff, 0xffff00, 0xff00aa, 0x00ffff, 0xff00ff,
+      0xff00ff, 0x00ffff, 0xffff00, 0xff00aa, 0x9900ff, 0xff0000,
+      0x00ff00, 0x0000ff, 0xffff00, 0xff00aa, 0x00ffff, 0xff00ff,
+      0x9900ff, 0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00aa
+    ];
     const positions = [
-      [-2, 2, -2],
-      [2, 1, 2],
-      [0, 3, 0],
-      [-3, 1.5, 3],
-      [3, 2.5, -3],
-      [0, 4, 0]
+      [-2, 2, -2], [2, 1, 2], [0, 3, 0], [-3, 1.5, 3], [3, 2.5, -3], [0, 4, 0],
+      [-4, 2.5, -4], [4, 1.5, 4], [-1, 3.5, -1], [1, 2, 1], [-2, 2.5, -2], [2, 3, 2],
+      [-3, 1, -3], [3, 2, 3], [-4, 3, -4], [4, 2.5, 4], [-1, 2.5, -1], [1, 3.5, 1],
+      [-5, 2, -5], [5, 1.5, 5], [-2, 4, -2], [2, 2.5, 2], [-3, 3, -3], [3, 2, 3],
+      [-4, 2.5, -4], [4, 3, 4], [-1, 3.5, -1], [1, 2.5, 1], [-2, 3, -2], [2, 3.5, 2],
+      [-3, 2, -3], [3, 3, 3], [-4, 3.5, -4], [4, 2, 4], [-1, 3, -1], [1, 3.5, 1]
     ];
     
     colors.forEach((color, i) => {
@@ -417,6 +424,34 @@ function init() {
       plant.userData = {
         swaySpeed: 0.1 + Math.random() * 0.2,
         swayAmount: 0.05 + Math.random() * 0.1,
+        offset: Math.random() * Math.PI * 2
+      };
+    }
+
+    // Ajout des 100 bâtons verts
+    const stickGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.2 + Math.random() * 0.3, 6);
+    const stickMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2d5a27,
+      transparent: true,
+      opacity: 0.8
+    });
+
+    for(let i = 0; i < 100; i++) {
+      const stick = new THREE.Mesh(stickGeometry, stickMaterial);
+      stick.position.set(
+        (Math.random() - 0.5) * 10,
+        0.1,
+        (Math.random() - 0.5) * 10
+      );
+      stick.rotation.x = (Math.random() - 0.5) * 0.2; // Légère inclinaison aléatoire
+      stick.rotation.z = (Math.random() - 0.5) * 0.2;
+      
+      gardenScene.add(stick);
+      
+      // Données pour l'animation
+      stick.userData = {
+        swaySpeed: 0.05 + Math.random() * 0.1,
+        swayAmount: 0.02 + Math.random() * 0.05,
         offset: Math.random() * Math.PI * 2
       };
     }
@@ -785,9 +820,6 @@ function init() {
   function createPastelScene() {
     pastelScene = new THREE.Group();
     
-    // Fond pastel
-    scene.background = new THREE.Color('#ffe9f3');
-    
     // Charger la texture de la particule
     const textureLoader = new THREE.TextureLoader();
     const particleTexture = textureLoader.load('/particles/11.png');
@@ -940,8 +972,8 @@ function init() {
 
   createStarField();
   createBubbleField();
-  createNeonScene();
   createGardenScene();
+  createNeonScene();
   createSpaceScene();
   createTextOverlay();
   createMirrorScene();
@@ -1023,20 +1055,8 @@ function init() {
       }
 
       // Fond et sol
-      gsap.to(scene.background, {
-        r: new THREE.Color(colors.bg).r,
-        g: new THREE.Color(colors.bg).g,
-        b: new THREE.Color(colors.bg).b,
-        duration: 0.5
-      });
-
-      // Toujours mettre à jour la couleur du sol principal
-      gsap.to(ground.material.color, {
-        r: new THREE.Color(colors.ground).r,
-        g: new THREE.Color(colors.ground).g,
-        b: new THREE.Color(colors.ground).b,
-        duration: 0.5
-      });
+      scene.background = new THREE.Color(colors.bg);
+      ground.material.color.set(colors.ground);
 
       colorIndex = (colorIndex + 1) % dreamColors.length;
     }
@@ -1091,32 +1111,19 @@ function init() {
           y: 0.15,
           duration: 0.5
         });
-        
-        // Si ce n'était pas un rêve, on s'assure que les couleurs sont celles de la réalité
-        if (!isDream) {
-          // Désactiver le champ d'étoiles
-          gsap.to(starField.children[0].material, {
-            opacity: 0,
-            duration: 0.5,
-            onComplete: () => {
-              starField.visible = false;
-            }
-          });
-          
-          gsap.to(scene.background, {
-            r: new THREE.Color('#101018').r,
-            g: new THREE.Color('#101018').g,
-            b: new THREE.Color('#101018').b,
-            duration: 0.5
-          });
 
-          gsap.to(ground.material.color, {
-            r: new THREE.Color('#555').r,
-            g: new THREE.Color('#555').g,
-            b: new THREE.Color('#555').b,
-            duration: 0.5
-          });
-        }
+        // Réinitialiser le décor à son état initial
+        scene.background = new THREE.Color('#101018');
+        ground.material.color.set('#666');
+        scene.fog = null;
+
+        // Désactiver tous les effets spéciaux
+        mirrorScene.visible = false;
+        pastelScene.visible = false;
+        bubbleField.visible = false;
+        neonScene.visible = false;
+        gardenScene.visible = false;
+        spaceScene.visible = false;
       }
     }
 
