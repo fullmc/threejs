@@ -338,7 +338,90 @@ function init() {
     });
     ground.material = cloudGroundMat;
     
-    // Création des fleurs
+    // Création des pétales qui tombent
+    const petalGeometry = new THREE.PlaneGeometry(0.1, 0.1);
+    const petalMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffe3e3,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide
+    });
+    
+    for(let i = 0; i < 30; i++) {
+      const petal = new THREE.Mesh(petalGeometry, petalMaterial);
+      petal.position.set(
+        (Math.random() - 0.5) * 10,
+        Math.random() * 5 + 5,
+        (Math.random() - 0.5) * 10
+      );
+      
+      gardenScene.add(petal);
+      
+      // Données pour l'animation
+      petal.userData = {
+        fallSpeed: 0.02 + Math.random() * 0.03,
+        rotationSpeed: (Math.random() - 0.5) * 0.02,
+        swaySpeed: 0.1 + Math.random() * 0.2,
+        swayAmount: 0.1 + Math.random() * 0.2,
+        offset: Math.random() * Math.PI * 2
+      };
+    }
+    
+    // Création des lucioles
+    const fireflyGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+    const fireflyMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffe3e3,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending
+    });
+    
+    for(let i = 0; i < 20; i++) {
+      const firefly = new THREE.Mesh(fireflyGeometry, fireflyMaterial);
+      firefly.position.set(
+        (Math.random() - 0.5) * 8,
+        Math.random() * 3 + 1,
+        (Math.random() - 0.5) * 8
+      );
+      
+      gardenScene.add(firefly);
+      
+      // Données pour l'animation
+      firefly.userData = {
+        floatSpeed: 0.1 + Math.random() * 0.2,
+        rotationSpeed: 0.1 + Math.random() * 0.2,
+        pulseSpeed: 1 + Math.random() * 2,
+        offset: Math.random() * Math.PI * 2
+      };
+    }
+    
+    // Création des plantes flottantes
+    const plantGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
+    const plantMaterial = new THREE.MeshStandardMaterial({
+      color: 0x90EE90,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    for(let i = 0; i < 15; i++) {
+      const plant = new THREE.Mesh(plantGeometry, plantMaterial);
+      plant.position.set(
+        (Math.random() - 0.5) * 8,
+        0.15,
+        (Math.random() - 0.5) * 8
+      );
+      
+      gardenScene.add(plant);
+      
+      // Données pour l'animation
+      plant.userData = {
+        swaySpeed: 0.1 + Math.random() * 0.2,
+        swayAmount: 0.05 + Math.random() * 0.1,
+        offset: Math.random() * Math.PI * 2
+      };
+    }
+    
+    // Création des fleurs existantes
     const flowerColors = [0xffb7d5, 0xffffff, 0xffe3e3];
     const flowerGeometry = new THREE.Group();
     // Centre de la fleur
@@ -379,7 +462,9 @@ function init() {
         mesh: flower,
         speed: 0.2 + Math.random() * 0.3,
         rotationSpeed: (Math.random() - 0.5) * 0.02,
-        offset: Math.random() * Math.PI * 2
+        offset: Math.random() * Math.PI * 2,
+        windSpeed: 0.1 + Math.random() * 0.2,
+        windAmount: 0.05 + Math.random() * 0.1
       });
       
       gardenScene.add(flower);
@@ -437,10 +522,8 @@ function init() {
     
     const moonGroundMat = new THREE.MeshStandardMaterial({
       color: 0x1b1d2a,
-      map: moonTexture,
-      bumpMap: moonBumpMap,
-      bumpScale: 0.04,
-      roughness: 0.8
+      roughness: 0.8,
+      metalness: 0.2
     });
     ground.material = moonGroundMat;
     
@@ -1061,21 +1144,10 @@ function init() {
 function changeEnvironment(forceDream = false) {
   const isDream = forceDream ? true : Math.random() > 0.5;
   const bgColor = isDream ? '#2b0a3d' : '#101018';
-  const groundColor = isDream ? '#331a5d' : '#555';
+  const groundColor = isDream ? '#331a5d' : '#ffffff';
 
-  gsap.to(scene.background, {
-    r: new THREE.Color(bgColor).r,
-    g: new THREE.Color(bgColor).g,
-    b: new THREE.Color(bgColor).b,
-    duration: 1
-  });
-
-  gsap.to(ground.material.color, {
-    r: new THREE.Color(groundColor).r,
-    g: new THREE.Color(groundColor).g,
-    b: new THREE.Color(groundColor).b,
-    duration: 1
-  });
+  scene.background = new THREE.Color(bgColor);
+  ground.material.color.set(groundColor);
 }
 
 function onWindowResize() {
@@ -1186,21 +1258,65 @@ function animate() {
 
   // Animation du jardin
   if (gardenScene && gardenScene.visible) {
+    const time = Date.now() * 0.001;
+    
+    // Animation des pétales qui tombent
+    gardenScene.children.forEach(child => {
+      if (child.userData.fallSpeed) {
+        // Chute
+        child.position.y -= child.userData.fallSpeed;
+        
+        // Rotation
+        child.rotation.x += child.userData.rotationSpeed;
+        child.rotation.y += child.userData.rotationSpeed;
+        
+        // Balancement
+        child.position.x += Math.sin(time * child.userData.swaySpeed + child.userData.offset) * child.userData.swayAmount;
+        child.position.z += Math.cos(time * child.userData.swaySpeed + child.userData.offset) * child.userData.swayAmount;
+        
+        // Respawn en haut
+        if (child.position.y < -5) {
+          child.position.y = 10;
+          child.position.x = (Math.random() - 0.5) * 10;
+          child.position.z = (Math.random() - 0.5) * 10;
+        }
+      }
+      
+      // Animation des lucioles
+      if (child.userData.pulseSpeed) {
+        child.position.y += Math.sin(time * child.userData.floatSpeed + child.userData.offset) * 0.01;
+        child.rotation.x += child.userData.rotationSpeed;
+        child.rotation.y += child.userData.rotationSpeed;
+        child.material.opacity = 0.4 + Math.sin(time * child.userData.pulseSpeed + child.userData.offset) * 0.4;
+      }
+      
+      // Animation des plantes flottantes
+      if (child.userData.swaySpeed && child.position.y === 0.15) {
+        child.rotation.x = Math.sin(time * child.userData.swaySpeed + child.userData.offset) * child.userData.swayAmount;
+        child.rotation.z = Math.cos(time * child.userData.swaySpeed + child.userData.offset) * child.userData.swayAmount;
+      }
+    });
+    
+    // Animation des fleurs avec effet de vent
     flowers.forEach(flower => {
       flower.mesh.position.y -= 0.005 * flower.speed;
       flower.mesh.rotation.y += flower.rotationSpeed;
+      
+      // Effet de vent
+      flower.mesh.rotation.x = Math.sin(time * flower.windSpeed + flower.offset) * flower.windAmount;
+      flower.mesh.rotation.z = Math.cos(time * flower.windSpeed + flower.offset) * flower.windAmount;
       
       if (flower.mesh.position.y < 0) {
         flower.mesh.position.y = 5;
       }
     });
     
+    // Animation des papillons
     butterflies.forEach(butterfly => {
       butterfly.wingAngle += 0.1 * butterfly.speed;
       butterfly.mesh.children[0].rotation.y = Math.sin(butterfly.wingAngle) * 0.5;
       butterfly.mesh.children[1].rotation.y = -Math.sin(butterfly.wingAngle) * 0.5;
       
-      const time = Date.now() * 0.001;
       butterfly.mesh.position.x += Math.sin(time + butterfly.offset) * 0.01;
       butterfly.mesh.position.z += Math.cos(time + butterfly.offset) * 0.01;
       butterfly.mesh.position.y += Math.sin(time * 0.5 + butterfly.offset) * 0.005;
