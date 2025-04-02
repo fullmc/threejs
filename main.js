@@ -64,20 +64,35 @@ function init() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // Totem (simple cone on top of a cylinder)
-  const base = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 32);
-  const top = new THREE.ConeGeometry(0.15, 0.4, 32);
-  const metalMat = new THREE.MeshStandardMaterial({ color: '#fff', metalness: 0.1, roughness: 0.3 });
+  // Matériau métallique pour la toupie
+  const metalMat = new THREE.MeshStandardMaterial({ 
+    color: '#fff', 
+    metalness: 0.1, 
+    roughness: 0.3,
+    envMapIntensity: 1
+  });
 
-  const baseMesh = new THREE.Mesh(base, metalMat);
-  const topMesh = new THREE.Mesh(top, metalMat);
-  topMesh.position.y = 0.25;
-
-  totem = new THREE.Group();
-  totem.add(baseMesh);
-  totem.add(topMesh);
-  totem.position.y = 0.1;
-  scene.add(totem);
+  // Totem (toupie d'Inception)
+  const totemGroup = new THREE.Group();
+  
+  // Triangle inférieur (inversé)
+  const bottomGeometry = new THREE.ConeGeometry(0.15, 0.3, 3);
+  const bottomMesh = new THREE.Mesh(bottomGeometry, metalMat);
+  bottomMesh.rotation.y = Math.PI / 3; // Rotation pour aligner les faces
+  bottomMesh.rotation.x = Math.PI; // Rotation pour pointer vers le bas
+  totemGroup.add(bottomMesh);
+  
+  // Triangle supérieur (droit)
+  const topGeometry = new THREE.ConeGeometry(0.15, 0.3, 3);
+  const topMesh = new THREE.Mesh(topGeometry, metalMat);
+  topMesh.position.y = 0.3;
+  topMesh.rotation.y = Math.PI / 3; // Rotation pour aligner les faces
+  totemGroup.add(topMesh);
+  
+  // Position initiale (ajustée pour que la base touche le sol)
+  totemGroup.position.y = 0.15; // Hauteur ajustée pour que la base touche le sol
+  scene.add(totemGroup);
+  totem = totemGroup;
 
   // Controls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -85,30 +100,42 @@ function init() {
 
   function createStarField() {
     starField = new THREE.Group();
-    const starsGeometry = new THREE.BufferGeometry();
-    const starsMaterial = new THREE.PointsMaterial({
-      color: 0xFFFFFF,
-      size: 0.02,
-      transparent: true,
-      opacity: 0,
-      blending: THREE.AdditiveBlending
-    });
-
-    const starsVertices = [];
-    for(let i = 0; i < 1000; i++) {
-      const x = (Math.random() - 0.5) * 20;
-      const y = (Math.random() - 0.5) * 20;
-      const z = (Math.random() - 0.5) * 20;
-      starsVertices.push(x, y, z);
-      stars.push({
-        velocity: Math.random() * 0.02,
-        brightness: Math.random()
-      });
+    
+    // Charger les textures des particules
+    const textureLoader = new THREE.TextureLoader();
+    const particleTextures = [];
+    for(let i = 1; i <= 13; i++) {
+      particleTextures.push(textureLoader.load(`/particles/${i}.png`));
     }
-
-    starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-    const starPoints = new THREE.Points(starsGeometry, starsMaterial);
-    starField.add(starPoints);
+    
+    // Créer les particules
+    for(let i = 0; i < 50; i++) {
+      const geometry = new THREE.PlaneGeometry(0.1, 0.1);
+      const material = new THREE.MeshBasicMaterial({
+        map: particleTextures[Math.floor(Math.random() * particleTextures.length)],
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const particle = new THREE.Mesh(geometry, material);
+      particle.position.set(
+        (Math.random() - 0.5) * 20,
+        (Math.random() - 0.5) * 20,
+        (Math.random() - 0.5) * 20
+      );
+      
+      stars.push({
+        mesh: particle,
+        velocity: Math.random() * 0.02,
+        rotationSpeed: (Math.random() - 0.5) * 0.02,
+        floatSpeed: 0.2 + Math.random() * 0.3,
+        offset: Math.random() * Math.PI * 2
+      });
+      
+      starField.add(particle);
+    }
+    
     scene.add(starField);
     starField.visible = false;
   }
@@ -146,6 +173,73 @@ function init() {
       
       bubbleField.add(bubble);
     }
+
+    // Créer les méduses lumineuses
+    for(let i = 0; i < 5; i++) {
+      const jellyfish = new THREE.Group();
+      const body = new THREE.SphereGeometry(0.3, 16, 16);
+      const material = new THREE.MeshPhysicalMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.4,
+        transmission: 0.8,
+        roughness: 0.2,
+        metalness: 0.1
+      });
+      
+      const bodyMesh = new THREE.Mesh(body, material);
+      jellyfish.add(bodyMesh);
+      
+      // Ajouter des tentacules
+      for(let j = 0; j < 8; j++) {
+        const tentacle = new THREE.CylinderGeometry(0.02, 0.01, 0.5, 8);
+        const tentacleMesh = new THREE.Mesh(tentacle, material);
+        tentacleMesh.position.y = -0.3;
+        tentacleMesh.rotation.x = Math.PI / 2;
+        tentacleMesh.rotation.z = (j / 8) * Math.PI * 2;
+        jellyfish.add(tentacleMesh);
+      }
+      
+      jellyfish.position.set(
+        (Math.random() - 0.5) * 8,
+        Math.random() * 4 + 2,
+        (Math.random() - 0.5) * 8
+      );
+      
+      bubbleField.add(jellyfish);
+      bubbles.push({
+        mesh: jellyfish,
+        speed: 0.1 + Math.random() * 0.2,
+        offset: Math.random() * Math.PI * 2,
+        isJellyfish: true
+      });
+    }
+
+    // Créer les cercles concentriques lumineux
+    const textureLoader = new THREE.TextureLoader();
+    const particleTexture = textureLoader.load('/particles/2.png');
+    
+    for(let i = 0; i < 3; i++) {
+      const circle = new THREE.RingGeometry(2 + i * 0.5, 2.1 + i * 0.5, 32);
+      const material = new THREE.MeshBasicMaterial({
+        map: particleTexture,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide
+      });
+      
+      const circleMesh = new THREE.Mesh(circle, material);
+      circleMesh.rotation.x = -Math.PI / 2;
+      circleMesh.position.y = 0.01;
+      
+      bubbleField.add(circleMesh);
+      bubbles.push({
+        mesh: circleMesh,
+        speed: 0.1,
+        offset: i * Math.PI / 2,
+        isCircle: true
+      });
+    }
     
     scene.add(bubbleField);
     bubbleField.visible = false;
@@ -164,11 +258,14 @@ function init() {
     ground.material = reflectiveGroundMat;
     
     // Lumières néon
-    const colors = [0x00ffff, 0xff00ff, 0x9900ff];
+    const colors = [0x00ffff, 0xff00ff, 0x9900ff, 0xff0000, 0x00ff00, 0x0000ff];
     const positions = [
       [-2, 2, -2],
       [2, 1, 2],
-      [0, 3, 0]
+      [0, 3, 0],
+      [-3, 1.5, 3],
+      [3, 2.5, -3],
+      [0, 4, 0]
     ];
     
     colors.forEach((color, i) => {
@@ -196,7 +293,7 @@ function init() {
       new THREE.TetrahedronGeometry(0.2)
     ];
     
-    for(let i = 0; i < 15; i++) {
+    for(let i = 0; i < 25; i++) {
       const geometry = geometries[Math.floor(Math.random() * geometries.length)];
       const material = new THREE.MeshStandardMaterial({
         color: colors[Math.floor(Math.random() * colors.length)],
@@ -333,6 +430,11 @@ function init() {
     // Sol lunaire
     const textureLoader = new TextureLoader();
     
+    // Charger les nouvelles textures de particules
+    const particleTexture9 = textureLoader.load('/particles/9.png');
+    const particleTexture8 = textureLoader.load('/particles/8.png');
+    const particleTexture3 = textureLoader.load('/particles/3.png');
+    
     const moonGroundMat = new THREE.MeshStandardMaterial({
       color: 0x1b1d2a,
       map: moonTexture,
@@ -355,6 +457,35 @@ function init() {
     const distantLight = new THREE.DirectionalLight(0x4466ff, 0.2);
     distantLight.position.set(-20, 2, -10);
     spaceScene.add(distantLight);
+    
+    // Ajouter les nouvelles particules spatiales
+    const particleTextures = [particleTexture9, particleTexture8, particleTexture3];
+    
+    for(let i = 0; i < 15; i++) {
+      const geometry = new THREE.PlaneGeometry(0.2, 0.2);
+      const material = new THREE.MeshBasicMaterial({
+        map: particleTextures[Math.floor(Math.random() * particleTextures.length)],
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const particle = new THREE.Mesh(geometry, material);
+      particle.position.set(
+        (Math.random() - 0.5) * 20,
+        Math.random() * 10,
+        (Math.random() - 0.5) * 20
+      );
+      
+      spaceScene.add(particle);
+      
+      // Données pour l'animation
+      particle.userData = {
+        rotationSpeed: (Math.random() - 0.5) * 0.01,
+        floatSpeed: 0.1 + Math.random() * 0.2,
+        floatOffset: Math.random() * Math.PI * 2
+      };
+    }
     
     // Rochers flottants
     const asteroidGeometries = [
@@ -561,27 +692,25 @@ function init() {
     // Fond pastel
     scene.background = new THREE.Color('#ffe9f3');
     
-    // Création des nuages
-    const cloudGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const cloudMaterial = new THREE.MeshStandardMaterial({
-      color: '#ffffff',
-      roughness: 0.9,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.8
-    });
+    // Charger la texture de la particule
+    const textureLoader = new THREE.TextureLoader();
+    const particleTexture = textureLoader.load('/particles/11.png');
     
-    for(let i = 0; i < 10; i++) {
-      const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
+    // Créer les gros nuages
+    for(let i = 0; i < 8; i++) {
+      const geometry = new THREE.PlaneGeometry(0.3, 0.3);
+      const material = new THREE.MeshBasicMaterial({
+        map: particleTexture,
+        transparent: true,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const cloud = new THREE.Mesh(geometry, material);
       cloud.position.set(
         (Math.random() - 0.5) * 8,
         Math.random() * 4 + 1,
         (Math.random() - 0.5) * 8
-      );
-      cloud.scale.set(
-        1 + Math.random() * 0.5,
-        0.5 + Math.random() * 0.3,
-        1 + Math.random() * 0.5
       );
       
       pastelObjects.push({
@@ -594,39 +723,59 @@ function init() {
       pastelScene.add(cloud);
     }
     
-    // Formes géométriques colorées
-    const shapes = [
-      { geometry: new THREE.BoxGeometry(0.3, 0.3, 0.3), color: '#ffb7d5' },
-      { geometry: new THREE.SphereGeometry(0.2, 16, 16), color: '#c6e2ff' },
-      { geometry: new THREE.OctahedronGeometry(0.2, 0), color: '#fff8e1' },
-      { geometry: new THREE.TetrahedronGeometry(0.2), color: '#ffd1dc' }
-    ];
-    
-    for(let i = 0; i < 15; i++) {
-      const shape = shapes[Math.floor(Math.random() * shapes.length)];
-      const material = new THREE.MeshStandardMaterial({
-        color: shape.color,
-        roughness: 0.7,
-        metalness: 0.1,
+    // Créer les cœurs
+    for(let i = 0; i < 10; i++) {
+      const heartGeometry = new THREE.ShapeGeometry(createHeartShape());
+      const heartMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff69b4,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending
       });
       
-      const mesh = new THREE.Mesh(shape.geometry, material);
-      mesh.position.set(
+      const heart = new THREE.Mesh(heartGeometry, heartMaterial);
+      heart.scale.set(0.3, 0.3, 0.3);
+      heart.position.set(
         (Math.random() - 0.5) * 8,
         Math.random() * 4 + 1,
         (Math.random() - 0.5) * 8
       );
       
       pastelObjects.push({
-        mesh: mesh,
+        mesh: heart,
         floatSpeed: 0.1 + Math.random() * 0.2,
         rotationSpeed: (Math.random() - 0.5) * 0.01,
         offset: Math.random() * Math.PI * 2
       });
       
-      pastelScene.add(mesh);
+      pastelScene.add(heart);
+    }
+    
+    // Créer les particules
+    for(let i = 0; i < 15; i++) {
+      const geometry = new THREE.PlaneGeometry(0.2, 0.2);
+      const material = new THREE.MeshBasicMaterial({
+        map: particleTexture,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const particle = new THREE.Mesh(geometry, material);
+      particle.position.set(
+        (Math.random() - 0.5) * 8,
+        Math.random() * 4 + 1,
+        (Math.random() - 0.5) * 8
+      );
+      
+      pastelObjects.push({
+        mesh: particle,
+        floatSpeed: 0.1 + Math.random() * 0.2,
+        rotationSpeed: (Math.random() - 0.5) * 0.01,
+        offset: Math.random() * Math.PI * 2
+      });
+      
+      pastelScene.add(particle);
     }
     
     // Particules douces (confettis)
@@ -679,6 +828,20 @@ function init() {
     pastelScene.visible = false;
   }
 
+  // Fonction utilitaire pour créer la forme d'un cœur
+  function createHeartShape() {
+    const shape = new THREE.Shape();
+    const x = 0, y = 0;
+    shape.moveTo(x + 0.25, y + 0.25);
+    shape.bezierCurveTo(x + 0.25, y + 0.25, x + 0.2, y, x, y);
+    shape.bezierCurveTo(x - 0.3, y, x - 0.3, y + 0.35, x - 0.3, y + 0.35);
+    shape.bezierCurveTo(x - 0.3, y + 0.55, x - 0.15, y + 0.77, x + 0.25, y + 1);
+    shape.bezierCurveTo(x + 0.65, y + 0.77, x + 0.8, y + 0.55, x + 0.8, y + 0.35);
+    shape.bezierCurveTo(x + 0.8, y + 0.35, x + 0.8, y, x + 0.5, y);
+    shape.bezierCurveTo(x + 0.35, y, x + 0.25, y + 0.25, x + 0.25, y + 0.25);
+    return shape;
+  }
+
   createStarField();
   createBubbleField();
   createNeonScene();
@@ -711,7 +874,7 @@ function init() {
     });
 
     const maxRotationSpeed = 25;
-    const duration = isDream ? 60 : 10;
+    const duration = isDream ? 20 : 5;
     let elapsed = 0;
     let initialTilt = 0.5;
     let lastEnvironmentChange = 0;
@@ -782,10 +945,19 @@ function init() {
         // Rotation principale
         totem.rotation.y += currentSpeed * delta;
         
-        // Effet d'oscillation
+        // Effet d'oscillation avec collision au sol
         const tiltDecay = initialTilt * (1 - progress);
-        totem.rotation.x = Math.cos(elapsed * 2) * tiltDecay;
+        const oscillation = Math.cos(elapsed * 2) * tiltDecay;
+        
+        // Calcul de la hauteur de la toupie en fonction de l'oscillation
+        const height = Math.abs(Math.sin(oscillation)) * 0.3; // Hauteur maximale de 0.3 unités
+        
+        // Limiter l'oscillation pour éviter que la toupie ne passe sous le sol
+        totem.rotation.x = Math.max(oscillation, -0.2);
         totem.rotation.z = Math.sin(elapsed * 2) * tiltDecay;
+
+        // Ajuster la position Y pour maintenir le contact avec le sol
+        totem.position.y = 0.15 + height;
 
         // Changement de décor toutes les 2s UNIQUEMENT si c'est un rêve
         if (isDream && elapsed - lastEnvironmentChange >= 2) {
@@ -815,6 +987,12 @@ function init() {
         gsap.to(totem.rotation, {
           x: 0,
           z: 0,
+          duration: 0.5
+        });
+        
+        // Remettre la toupie au niveau du sol
+        gsap.to(totem.position, {
+          y: 0.15,
           duration: 0.5
         });
         
@@ -906,41 +1084,54 @@ function animate() {
   
   // Animation des étoiles
   if (starField && starField.visible) {
-    const positions = starField.children[0].geometry.attributes.position.array;
-    for(let i = 0; i < positions.length; i += 3) {
-      // Faire "pulser" les étoiles
-      const star = stars[i/3];
-      star.brightness = Math.sin(Date.now() * star.velocity) * 0.5 + 0.5;
+    stars.forEach(star => {
+      const time = Date.now() * 0.001;
       
-      // Faire tourner légèrement le champ d'étoiles
-      const x = positions[i];
-      const z = positions[i + 2];
-      const angle = 0.0001;
-      positions[i] = x * Math.cos(angle) - z * Math.sin(angle);
-      positions[i + 2] = x * Math.sin(angle) + z * Math.cos(angle);
-    }
-    starField.children[0].geometry.attributes.position.needsUpdate = true;
-    starField.rotation.y += 0.0002;
+      // Rotation
+      star.mesh.rotation.z += star.rotationSpeed;
+      
+      // Mouvement flottant
+      star.mesh.position.y += Math.sin(time + star.offset) * 0.01 * star.floatSpeed;
+      
+      // Mouvement circulaire léger
+      const radius = Math.sqrt(star.mesh.position.x * star.mesh.position.x + star.mesh.position.z * star.mesh.position.z);
+      const angle = time * star.velocity;
+      star.mesh.position.x = Math.cos(angle) * radius;
+      star.mesh.position.z = Math.sin(angle) * radius;
+      
+      // Pulsation de l'opacité
+      star.mesh.material.opacity = 0.3 + Math.sin(time * 2 + star.offset) * 0.2;
+    });
   }
 
   // Animation des bulles
   if (bubbleField && bubbleField.visible) {
     bubbles.forEach((bubble, i) => {
-      // Mouvement vertical ondulant
-      bubble.mesh.position.y += Math.sin(Date.now() * 0.001 + bubble.offset) * 0.01 * bubble.speed;
+      const time = Date.now() * 0.001;
       
-      // Mouvement latéral léger
-      bubble.mesh.position.x += Math.sin(Date.now() * 0.0005 + bubble.offset) * 0.01;
-      bubble.mesh.position.z += Math.cos(Date.now() * 0.0005 + bubble.offset) * 0.01;
-      
-      // Réinitialiser la position si trop haute
-      if (bubble.mesh.position.y > 5) {
-        bubble.mesh.position.y = 0;
+      if (bubble.isJellyfish) {
+        // Animation de la méduse
+        bubble.mesh.position.y += Math.sin(time + bubble.offset) * 0.01 * bubble.speed;
+        bubble.mesh.rotation.y += 0.001;
+        bubble.mesh.children.forEach(tentacle => {
+          tentacle.rotation.x = Math.PI / 2 + Math.sin(time + bubble.offset) * 0.1;
+        });
+      } else if (bubble.isCircle) {
+        // Animation du cercle
+        bubble.mesh.material.opacity = 0.2 + Math.sin(time * 2 + bubble.offset) * 0.1;
+      } else {
+        // Animation des bulles originales
+        bubble.mesh.position.y += Math.sin(time + bubble.offset) * 0.01 * bubble.speed;
+        bubble.mesh.position.x += Math.sin(time * 0.0005 + bubble.offset) * 0.01;
+        bubble.mesh.position.z += Math.cos(time * 0.0005 + bubble.offset) * 0.01;
+        
+        if (bubble.mesh.position.y > 5) {
+          bubble.mesh.position.y = 0;
+        }
+        
+        bubble.mesh.rotation.x += 0.001;
+        bubble.mesh.rotation.y += 0.001;
       }
-      
-      // Rotation douce
-      bubble.mesh.rotation.x += 0.001;
-      bubble.mesh.rotation.y += 0.001;
     });
   }
 
@@ -1020,6 +1211,29 @@ function animate() {
       positions[i + 1] += Math.sin(Date.now() * 0.001 + i) * 0.001;
     }
     spaceDust[0].geometry.attributes.position.needsUpdate = true;
+
+    // Animation des nouvelles particules spatiales
+    spaceScene.children.forEach(child => {
+      if (child.userData.rotationSpeed) {
+        const time = Date.now() * 0.001;
+        
+        // Rotation
+        child.rotation.x += child.userData.rotationSpeed;
+        child.rotation.y += child.userData.rotationSpeed;
+        
+        // Mouvement flottant
+        child.position.y += Math.sin(time + child.userData.floatOffset) * 0.01 * child.userData.floatSpeed;
+        
+        // Mouvement circulaire lent
+        const radius = Math.sqrt(child.position.x * child.position.x + child.position.z * child.position.z);
+        const angle = time * 0.1;
+        child.position.x = Math.cos(angle) * radius;
+        child.position.z = Math.sin(angle) * radius;
+        
+        // Pulsation de l'opacité
+        child.material.opacity = 0.4 + Math.sin(time * 2 + child.userData.floatOffset) * 0.2;
+      }
+    });
   }
 
   // Animation du monde miroir
