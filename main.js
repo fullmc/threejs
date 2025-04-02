@@ -66,9 +66,9 @@ function init() {
 
   // Matériau métallique pour la toupie
   const metalMat = new THREE.MeshStandardMaterial({ 
-    color: '#fff', 
-    metalness: 0.1, 
-    roughness: 0.3,
+    color: '#ffffff', 
+    metalness: 0.8,
+    roughness: 0.2,
     envMapIntensity: 1
   });
 
@@ -574,7 +574,7 @@ function init() {
     textOverlay.style.opacity = '1';
     textOverlay.style.maxWidth = '80%';
     textOverlay.style.padding = '20px';
-    textOverlay.innerHTML = "Et si tout ça n'était qu'un rêve ?<br>Cliquez sur la toupie… et découvrez la vérité.";
+    textOverlay.innerHTML = "Et si tout ça n'était qu'une illusion ?<br>Cliquez sur la toupie… et découvrez la vérité.";
     document.body.appendChild(textOverlay);
   }
 
